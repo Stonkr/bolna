@@ -15,13 +15,14 @@ port = 8002
 plivo_auth_id = os.getenv('PLIVO_AUTH_ID')
 plivo_auth_token = os.getenv('PLIVO_AUTH_TOKEN')
 plivo_phone_number = os.getenv('PLIVO_PHONE_NUMBER')
+ngrok_host= os.getenv('NGROK_HOST', 'ngrok')
 
 # Initialize Plivo client
 plivo_client = plivo.RestClient(os.getenv('PLIVO_AUTH_ID'), os.getenv('PLIVO_AUTH_TOKEN'))
 
 
 def populate_ngrok_tunnels():
-    response = requests.get("http://ngrok:4040/api/tunnels")  # ngrok interface
+    response = requests.get(f"http://{ngrok_host}:4040/api/tunnels")  # ngrok interface
     telephony_url, bolna_url = None, None
 
     if response.status_code == 200:

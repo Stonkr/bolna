@@ -54,7 +54,7 @@ class TaskManager(BaseManager):
             logger.info(f"API TOOLS is present {task['tools_config']['api_tools']}")
             self.kwargs['api_tools'] = task['tools_config']['api_tools']
 
-        if task['tools_config']["llm_agent"] and task['tools_config']["llm_agent"]['llm_config'].get('assistant_id', None) is not None:
+        if task['tools_config'].get("llm_agent") and task['tools_config']["llm_agent"].get('llm_config') and task['tools_config']["llm_agent"]['llm_config'].get('assistant_id') is not None:
             self.kwargs['assistant_id'] = task['tools_config']["llm_agent"]['llm_config']['assistant_id']
             logger.info(f"Assistant id for agent is {self.kwargs['assistant_id']}")
 
@@ -632,7 +632,8 @@ class TaskManager(BaseManager):
 
         self.is_local = local
         if task_id == 0:
-            if 'recipient_data' in self.context_data and self.context_data['recipient_data'] and self.context_data['recipient_data'].get('timezone', None):
+            print("Context data", self.context_data)
+            if self.context_data and 'recipient_data' in self.context_data and self.context_data['recipient_data'] and self.context_data['recipient_data'].get('timezone', None):
                 self.timezone = pytz.timezone(self.context_data['recipient_data']['timezone'])
 
         today = datetime.now(self.timezone).strftime("%A, %B %d, %Y")
