@@ -4,11 +4,18 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
-    git \
     ffmpeg
+
+RUN pwd && ls -la && echo "Current directory and its contents listed above"
+
+COPY ./bolna /app/bolna
+
+
+COPY ./requirements.txt /app/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install git+https://github.com/bolna-ai/bolna@master
-COPY quickstart_server.py /app/
+    pip install --no-cache-dir -r requirements.txt
+
+COPY local_setup/quickstart_server.py /app/
 
 EXPOSE 5001
 
