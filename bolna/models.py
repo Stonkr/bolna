@@ -137,7 +137,7 @@ class OpenaiAssistant(BaseModel):
     temperature: Optional[float] = 0.2
     buffer_size: Optional[int] = 100
     provider: Optional[str] = "openai"
-    model: Optional[str] = "gpt-3.5-turbo"
+    model: Optional[str] = "gpt-4o-mini"
 
 
 class MongoDBProviderConfig(BaseModel):
@@ -145,7 +145,7 @@ class MongoDBProviderConfig(BaseModel):
     db_name: Optional[str] = None
     collection_name: Optional[str] = None
     index_name: Optional[str] = None
-    llm_model: Optional[str] = "gpt-3.5-turbo"
+    llm_model: Optional[str] = "gpt-4o-mini"
     embedding_model: Optional[str] = "text-embedding-3-small"
     embedding_dimensions: Optional[int] = 256
 
@@ -160,7 +160,7 @@ class VectorStore(BaseModel):
 
 
 class Llm(BaseModel):
-    model: Optional[str] = "gpt-3.5-turbo"
+    model: Optional[str] = "gpt-4o-mini"
     max_tokens: Optional[int] = 100
     family: Optional[str] = "openai"
     temperature: Optional[float] = 0.1

@@ -1745,6 +1745,10 @@ class TaskManager(BaseManager):
                 continue
 
             time_since_last_spoken_AI_word = (time.time() - self.last_transmitted_timestamp)
+            print("time_since_last_spoken_AI_word", time_since_last_spoken_AI_word)
+            print("hang_conversation_after", self.hang_conversation_after)
+            print("time_since_last_spoken_human_word", self.time_since_last_spoken_human_word)
+            print("last_transmitted_timestamp", self.last_transmitted_timestamp)
             if time_since_last_spoken_AI_word > self.hang_conversation_after and self.time_since_last_spoken_human_word < self.last_transmitted_timestamp:
                 logger.info(f"{time_since_last_spoken_AI_word} seconds since last spoken time stamp and hence cutting the phone call and last transmitted timestampt ws {self.last_transmitted_timestamp} and time since last spoken human word {self.time_since_last_spoken_human_word}")
                 await self.__process_end_of_conversation()
