@@ -6,8 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     ffmpeg
 
-RUN pwd && ls -la && echo "Current directory and its contents listed above"
-
 COPY ./bolna /app/bolna
 
 
