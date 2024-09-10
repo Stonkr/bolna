@@ -35,6 +35,15 @@ class CreateAgentPayload(BaseModel):
     agent_config: AgentModel
     agent_prompts: Optional[Dict[str, Dict[str, str]]]
 
+def generate_agent_uuid() -> str:
+    agent_uuid = str(uuid.uuid4())
+    agent_uuid = f"{get_environment_prefix()}{agent_uuid}"
+    return agent_uuid
+
+def get_environment_prefix() -> str:
+    environment = os.getenv('ENVIRONMENT', 'production')
+    return f"{environment}_" if environment != 'production' else ''
+
 
 @app.post("/agent")
 async def create_agent(agent_data: CreateAgentPayload):
@@ -94,3 +103,34 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
     except Exception as e:
         traceback.print_exc()
         logger.error(f"error in executing {e}")
+
+@app.get("/agent/{agent_id}")
+async def get_agent_details(agent_id: str):
+    try:
+        agent_data = await redis_client.get(agent_id)
+        if agent_data:
+            return json.loads(agent_data)
+        else:
+            raise HTTPException(status_code=404, detail="Agent not found")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@app.get("/agents-keys")
+async def list_agents():
+    environment_prefix = get_environment_prefix()
+    agent_keys = await redis_client.keys(f'{environment_prefix}*')
+    return {"agents_keys": agent_keys}
+
+@app.get("/agents")
+async def list_agents():
+    environment_prefix = get_environment_prefix()
+    agent_keys = await redis_client.keys(f'{environment_prefix}*')
+    
+    if agent_keys:
+        agent_values = await redis_client.mget(agent_keys)
+        agents = {key: json.loads(value) for key, value in zip(agent_keys, agent_values) if value}
+    else:
+        agents = {}
+
+    return {"agents": agents}
