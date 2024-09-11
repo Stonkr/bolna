@@ -15,6 +15,7 @@ from bolna.agent_manager.assistant_manager import AssistantManager
 
 load_dotenv()
 logger = configure_logger(__name__)
+BUCKET_NAME=os.getenv('BUCKET_NAME')
 
 redis_pool = redis.ConnectionPool.from_url(os.getenv('REDIS_URL'), decode_responses=True)
 redis_client = redis.Redis.from_pool(redis_pool)
@@ -51,6 +52,7 @@ async def create_agent(agent_data: CreateAgentPayload):
     data_for_db = agent_data.agent_config.model_dump()
     data_for_db["assistant_status"] = "seeding"
     agent_prompts = agent_data.agent_prompts
+    print("agent_prompts", agent_prompts)
     logger.info(f'Data for DB {data_for_db}')
 
     if len(data_for_db['tasks']) > 0:
@@ -69,7 +71,7 @@ async def create_agent(agent_data: CreateAgentPayload):
     stored_prompt_file_path = f"{agent_uuid}/conversation_details.json"
     await asyncio.gather(
         redis_client.set(agent_uuid, json.dumps(data_for_db)),
-        store_file(file_key=stored_prompt_file_path, file_data=agent_prompts, local=True)
+        store_file(bucket_name=BUCKET_NAME, file_key=stored_prompt_file_path, file_data=agent_prompts, local=False)
     )
 
     return {"agent_id": agent_uuid, "state": "created"}

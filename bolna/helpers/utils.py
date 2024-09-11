@@ -26,9 +26,11 @@ from pydub import AudioSegment
 logger = configure_logger(__name__)
 load_dotenv()
 BUCKET_NAME = os.getenv('BUCKET_NAME')
+print("BUCKET_NAME is", BUCKET_NAME)
 RECORDING_BUCKET_NAME = os.getenv('RECORDING_BUCKET_NAME')
 RECORDING_BUCKET_URL = os.getenv('RECORDING_BUCKET_URL')
 
+print("REcording bucket is", RECORDING_BUCKET_NAME)
 class DictWithMissing(dict):
     def __missing__(self, key):
         return ''
@@ -151,19 +153,25 @@ async def delete_s3_file_by_prefix(bucket_name,file_key):
 
 async def store_file(bucket_name=None, file_key=None, file_data=None, content_type="json", local=False, preprocess_dir=None):
     if not local:
+        logger.info(f"Not local. saving file in {bucket_name}:{file_key}") 
         session = AioSession()
 
         async with AsyncExitStack() as exit_stack:
             s3_client = await exit_stack.enter_async_context(session.create_client('s3'))
+            print("content_type", content_type)
             data = None
             if content_type == "json":
                 data = json.dumps(file_data)
             elif content_type in ["mp3", "wav", "pcm", "csv"]:
                 data = file_data
             try:
+                # if isinstance(data, str):
+                #     data = data.encode('utf-8')
+                print("data", data)
                 await s3_client.put_object(Bucket=bucket_name, Key=file_key, Body=data)
+                logger.info("Saved file to s3")
             except (BotoCoreError, ClientError) as error:
-                logger.error(error)
+                logger.error("Boto error", error)
             except Exception as e:
                 logger.error('Exception occurred while s3 put object: {}'.format(e))
     if local:
