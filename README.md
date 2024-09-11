@@ -237,3 +237,18 @@ We love all types of contributions: whether big or small helping in improving th
 1. There are a number of [open issues present](https://github.com/bolna-ai/bolna/issues) which can be good ones to start with
 2. If you have suggestions for enhancements, wish to contribute a simple fix such as correcting a typo, or want to address an apparent bug, please feel free to initiate a new issue or submit a pull request
 2. If you're contemplating a larger change or addition to this repository, be it in terms of its structure or the features, kindly begin by creating a new issue [open a new issue :octocat:](https://github.com/bolna-ai/bolna/issues/new) and outline your proposed changes. This will allow us to engage in a discussion before you dedicate a significant amount of time or effort. Your cooperation and understanding are appreciated
+
+
+## Install vencv on local
+python3 --version && which python3.10
+/opt/homebrew/bin/python3.10 -m venv bolna_venv
+source bolna_venv/bin/activate
+pip install -r requirements.txt
+pip install -r local_setup/telephony_server/requirements.txt
+
+cd local_setup
+ngrok start --config local-ngrok-config.yml --all
+
+cd to root dir
+PYTHONPATH=. python local_setup/start_bolna_server.py
+PYTHONPATH=. python local_setup/start_plivo_server.py
