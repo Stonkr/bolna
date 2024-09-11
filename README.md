@@ -239,7 +239,7 @@ We love all types of contributions: whether big or small helping in improving th
 2. If you're contemplating a larger change or addition to this repository, be it in terms of its structure or the features, kindly begin by creating a new issue [open a new issue :octocat:](https://github.com/bolna-ai/bolna/issues/new) and outline your proposed changes. This will allow us to engage in a discussion before you dedicate a significant amount of time or effort. Your cooperation and understanding are appreciated
 
 
-## Install vencv on local
+## Install venv on local
 python3 --version && which python3.10
 /opt/homebrew/bin/python3.10 -m venv bolna_venv
 source bolna_venv/bin/activate
@@ -252,3 +252,6 @@ ngrok start --config local-ngrok-config.yml --all
 cd to root dir
 PYTHONPATH=. python local_setup/start_bolna_server.py
 PYTHONPATH=. python local_setup/start_plivo_server.py
+
+Remove all unused data (containers, images, volumes, and networks):
+docker system prune -a

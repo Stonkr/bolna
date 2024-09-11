@@ -96,7 +96,7 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
     assistant_manager = AssistantManager(agent_config, websocket, agent_id)
 
     try:
-        async for index, task_output in assistant_manager.run(local=True):
+        async for index, task_output in assistant_manager.run(local=False):
             logger.info(task_output)
     except WebSocketDisconnect:
         active_websockets.remove(websocket)
