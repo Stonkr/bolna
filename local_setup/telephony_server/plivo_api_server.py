@@ -79,6 +79,7 @@ async def plivo_connect(request: Request, bolna_host: str = Query(...), agent_id
 
         response = '''
         <Response>
+            <Record fileFormat="mp3" maxLength="240" recordSession="true"/>
             <Stream bidirectional="true" keepCallAlive="true">{}</Stream>
         </Response>
         '''.format(bolna_websocket_url)

@@ -1503,8 +1503,7 @@ class TaskManager(BaseManager):
     async def process_audio_data_for_output(self, meta_info, message):
         if self.task_config["tools_config"]["output"]["format"] == "pcm" and meta_info.get('format', '') != 'mulaw':
             message['data'] = wav_bytes_to_pcm(message['data'])
-
-        if self.synthesizer_provider == 'elevenlabs' and self.tools["output"].get_provider() == 'plivo':
+        elif self.synthesizer_provider == 'elevenlabs' and self.tools["output"].get_provider() == 'plivo':
             message['data'] = wav_bytes_to_pcm(message['data'])
 
         return message['data']
