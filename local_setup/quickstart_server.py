@@ -48,7 +48,7 @@ def get_environment_prefix() -> str:
 
 @app.post("/agent")
 async def create_agent(agent_data: CreateAgentPayload):
-    agent_uuid = str(uuid.uuid4())
+    agent_uuid = generate_agent_uuid()
     data_for_db = agent_data.agent_config.model_dump()
     data_for_db["assistant_status"] = "seeding"
     agent_prompts = agent_data.agent_prompts
