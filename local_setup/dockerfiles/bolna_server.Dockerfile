@@ -2,7 +2,7 @@ FROM python:3.10.13-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install build-essential && apt-get install -y --no-install-recommends \
     libgomp1 \
     ffmpeg
 
