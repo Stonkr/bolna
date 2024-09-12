@@ -2,11 +2,10 @@ FROM python:3.10.13-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
     libgomp1 \
     ffmpeg
 
-RUN apt-get install build-essential
 
 COPY ./bolna /app/bolna
 
