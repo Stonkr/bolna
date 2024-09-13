@@ -249,9 +249,16 @@ pip install -r local_setup/telephony_server/requirements.txt
 cd local_setup
 ngrok start --config local-ngrok-config.yml --all
 
+Setup AWS creds on the amchine to store the prompts in s3
+vim ~/.aws/config
+vim ~/.aws/credentials
+
 cd to root dir
 PYTHONPATH=. python local_setup/start_bolna_server.py
 PYTHONPATH=. python local_setup/start_plivo_server.py
 
 Remove all unused data (containers, images, volumes, and networks):
 docker system prune -a
+
+Latest release:
+1ce7be8954512e8185798a27438d8e80ae879eae

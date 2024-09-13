@@ -202,6 +202,18 @@ class TaskManager(BaseManager):
                         "max_tokens": self.llm_agent_config['max_tokens'],
                         "provider": self.llm_agent_config['provider'],
                     }
+        elif self.__is_openai_assistant():
+            if self.task_config["tools_config"]["llm_agent"] is not None:
+                logger.info(f"OPENAI ASSISTANT CONFIG {self.task_config['tools_config']['llm_agent']}")
+                self.llm_agent_config = self.task_config["tools_config"]["llm_agent"]["llm_config"]
+                logger.info("Setting llm_agent_config", self.llm_agent_config)
+                self.llm_config = {
+                        "model": self.llm_agent_config['model'],
+                        "max_tokens": self.llm_agent_config['max_tokens'],
+                        "provider": self.llm_agent_config['provider'],
+                        "assistant_id": self.llm_agent_config['assistant_id']
+                    }
+                
 
         # if self.task_config["tools_config"]["llm_agent"] is not None:
         #     self.llm_config = {
@@ -364,8 +376,9 @@ class TaskManager(BaseManager):
             #Setup tasks
             agent_params = {
                 'llm': llm,
-                'agent_type': self.llm_agent_config.get("agent_type","simple_llm_agent")
+                'agent_type': self.llm_agent_config.get("agent_type",self.task_config["tools_config"]["llm_agent"].get("agent_type", "simple_llm_agent"))
             }
+            logger.info(f"Getting response for {llm} and agent type {agent_params['agent_type']}")
             self.__setup_tasks(**agent_params)
 
         elif self.__is_multiagent():
@@ -388,6 +401,7 @@ class TaskManager(BaseManager):
         elif self.__is_openai_assistant():
             # if self.task_config['tools_config']["llm_agent"].get("agent_type", None) is None:
             #     assistant_config = {"assistant_id": self.task_config['tools_config']["llm_agent"]['assistant_id']}
+            llm = self.__setup_llm(self.llm_config)
             self.__setup_tasks(agent_type="openai_assistant", assistant_config=task['tools_config']["llm_agent"]['llm_config'])
 
         elif self.task_config["task_type"] == "webhook":
@@ -402,6 +416,7 @@ class TaskManager(BaseManager):
         if self.task_config["task_type"] == "webhook":
             return False
         agent_type = self.task_config['tools_config']["llm_agent"].get("agent_type", self.task_config['tools_config']["llm_agent"].get("agent_flow_type"))
+        logger.info(f"Agent type is {agent_type}")
         return agent_type == "openai_assistant"
 
     def __is_multiagent(self):
@@ -563,18 +578,24 @@ class TaskManager(BaseManager):
             if llm_config["provider"] in SUPPORTED_LLM_PROVIDERS.keys():
                 llm_class = SUPPORTED_LLM_PROVIDERS.get(llm_config["provider"])
                 logger.info(f"LLM CONFIG {llm_config}")
-                llm = llm_class(**llm_config, **self.kwargs)
+                if 'assistant_id' in llm_config and 'assistant_id' in self.kwargs:
+                    kwargs_clone = copy.deepcopy(self.kwargs)
+                    del kwargs_clone['assistant_id']
+                    llm = llm_class(**llm_config, **kwargs_clone)
+                else:
+                    llm = llm_class(**llm_config, **self.kwargs)
                 return llm
             else:
                 raise Exception(f'LLM {llm_config["provider"]} not supported')
 
     def __get_agent_object(self, llm, agent_type, assistant_config=None):
+        logger.info(f"Agent type: {agent_type}")
         if agent_type == "simple_llm_agent":
             logger.info(f"Simple llm agent")
             llm_agent = StreamingContextualAgent(llm)
         elif agent_type == "openai_assistant":
             logger.info(f"setting up backend as openai_assistants {assistant_config}")
-            llm_agent = OpenAIAssistantAgent(**assistant_config)
+            llm_agent = OpenAIAssistantAgent(llm)
         elif agent_type == "knowledgebase_agent":
             logger.info("#### Setting up knowledgebase_agent agent ####")
             llm_config = self.task_config["tools_config"]["llm_agent"].get("llm_config", {})
@@ -1175,7 +1196,7 @@ class TaskManager(BaseManager):
             logger.info(f"Message {messages} history {self.history}")
             messages.append({'role': 'user', 'content': message['data']})
             ### TODO CHECK IF THIS IS EVEN REQUIRED
-            convert_to_request_log(message=format_messages(messages, use_system_prompt=True), meta_info=meta_info, component="llm", direction="request", model=self.llm_config["model"], run_id= self.run_id)
+            convert_to_request_log(message=format_messages(messages, use_system_prompt=True), meta_info=meta_info, component="llm", direction="request", model=self.llm_config["model"] if self.llm_config else None, run_id= self.run_id)
 
             await self.__do_llm_generation(messages, meta_info, next_step, should_bypass_synth)
             # TODO : Write a better check for completion prompt
