@@ -14,7 +14,7 @@ load_dotenv()
     
 
 class OpenAiLLM(BaseLLM):
-    def __init__(self, max_tokens=100, buffer_size=40, model="gpt-3.5-turbo-16k", temperature= 0.1, **kwargs):
+    def __init__(self, max_tokens=100, buffer_size=40, model="gpt-4o-mini", temperature= 0.1, **kwargs):
         super().__init__(max_tokens, buffer_size)
         self.model = model
         self.custom_tools = kwargs.get("api_tools", None)
@@ -298,7 +298,7 @@ class OpenAiLLM(BaseLLM):
         self.started_streaming = False
 
     def get_response_format(self, is_json_format: bool):
-        if is_json_format and self.model in ('gpt-4-1106-preview', 'gpt-3.5-turbo-1106'):
+        if is_json_format and self.model.startswith('gpt'):
             return {"type": "json_object"}
         else:
             return {"type": "text"}
