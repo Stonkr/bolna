@@ -170,3 +170,4 @@ agent_data/**/mp3
 logs/
 agent_data/
 testing/
+local_setup/local-ngrok-config.yml
