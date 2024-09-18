@@ -187,3 +187,7 @@ async def append_to_csv(task_output, to_phone_number): # Added to_phone_number p
 #             return task_output
 #     else:
 #         raise FileNotFoundError(f"{file_path} does not exist")
+
+@app.get("/healthcheck")
+async def healthcheck():
+    return {"status": "Version 0.0.1"}
