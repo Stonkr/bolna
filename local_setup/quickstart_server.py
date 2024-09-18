@@ -1,3 +1,5 @@
+import csv
+import aiofiles
 import os
 import asyncio
 import uuid
@@ -19,7 +21,11 @@ BUCKET_NAME=os.getenv('BUCKET_NAME')
 
 redis_pool = redis.ConnectionPool.from_url(os.getenv('REDIS_URL'), decode_responses=True)
 redis_client = redis.Redis.from_pool(redis_pool)
+logger.info("Redis connection pool initialized")
+
 active_websockets: List[WebSocket] = []
+# Initialize an async lock for thread safety
+file_lock = asyncio.Lock()
 
 app = FastAPI()
 
@@ -81,7 +87,7 @@ async def create_agent(agent_data: CreateAgentPayload):
 # Websocket 
 #############################################################################################
 @app.websocket("/chat/v1/{agent_id}")
-async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: str = Query(None)):
+async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: str = Query(None), to_phone_number: str = Query(None)):
     logger.info("Connected to ws")
     await websocket.accept()
     active_websockets.append(websocket)
@@ -100,6 +106,7 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
     try:
         async for index, task_output in assistant_manager.run(local=False):
             logger.info(task_output)
+            await append_to_csv(task_output, to_phone_number) # Passing to_phone_number to the function
     except WebSocketDisconnect:
         active_websockets.remove(websocket)
     except Exception as e:
@@ -136,3 +143,47 @@ async def list_agents():
         agents = {}
 
     return {"agents": agents}
+
+
+
+
+async def append_to_csv(task_output, to_phone_number): # Added to_phone_number parameter
+    # Extract required values
+    run_id = task_output.get('run_id', '')
+    call_sid = task_output.get('call_sid', '')
+    stream_sid = task_output.get('stream_sid', '')
+    conversation_time = task_output.get('conversation_time', '')
+    ended_by_assistant = task_output.get('ended_by_assistant', '')
+
+    # Format the transcript
+    messages = task_output.get('messages', [])
+    transcript = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages if msg['role'] != 'system'])
+
+    # Define the file path
+    file_path = 'agent_data/calls.csv'
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    # Write or append to the CSV file
+    async with file_lock:
+        file_exists = os.path.isfile(file_path)
+        async with aiofiles.open(file_path, mode='a', newline='') as file:
+            if not file_exists:
+                # Write the header if the file doesn't exist
+                await file.write('run_id,to_number,call_sid,stream_sid,conversation_time,ended_by_assistant,transcript\n')
+            print(transcript)
+            # Write the data row
+            writer = csv.writer(file)
+            await writer.writerow([run_id, to_phone_number, call_sid, stream_sid, conversation_time, ended_by_assistant, transcript])
+
+# async def read_task_output():
+#     file_path = 'task_output.map'
+    
+#     if os.path.isfile(file_path):
+#         async with aiofiles.open(file_path, mode='r') as file:
+#             content = await file.read()
+#             task_output = json.loads(content)
+#             return task_output
+#     else:
+#         raise FileNotFoundError(f"{file_path} does not exist")

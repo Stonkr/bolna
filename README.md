@@ -255,10 +255,11 @@ vim ~/.aws/credentials
 
 cd to root dir
 PYTHONPATH=. python local_setup/start_bolna_server.py
-PYTHONPATH=. python local_setup/start_plivo_server.py
+PYTHONPATH=. python local_setup/telephony_server/start_plivo_server.py
 
 Remove all unused data (containers, images, volumes, and networks):
 docker system prune -a
 
 Latest release:
 1ce7be8954512e8185798a27438d8e80ae879eae
+1919d89e5131843629a97c9f9b6e2fd070ac58e2(Open ai assistant)
