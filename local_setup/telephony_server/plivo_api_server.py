@@ -7,6 +7,8 @@ import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 import plivo
+import urllib.parse
+
 
 app = FastAPI()
 load_dotenv()
@@ -61,7 +63,7 @@ async def make_call(request: Request):
         call = plivo_client.calls.create(
             from_=plivo_phone_number,
             to_=call_details.get('recipient_phone_number'),
-            answer_url=f"{telephony_host}/plivo_connect?bolna_host={bolna_host}&agent_id={agent_id}",
+            answer_url=f"{telephony_host}/plivo_connect?bolna_host={bolna_host}&agent_id={agent_id}&to_phone_number={call_details.get('recipient_phone_number')}", # Added to_phone_number to the URL
             hangup_url=f"{telephony_host}/plivo_hangup_callback",
             answer_method='POST')
 
@@ -73,9 +75,11 @@ async def make_call(request: Request):
 
 
 @app.post('/plivo_connect')
-async def plivo_connect(request: Request, bolna_host: str = Query(...), agent_id: str = Query(...)):
+async def plivo_connect(request: Request, bolna_host: str = Query(...), agent_id: str = Query(...), to_phone_number: str = Query(...)):
     try:
-        bolna_websocket_url = f'{bolna_host}/chat/v1/{agent_id}'
+        encoded_phone_number = urllib.parse.quote(to_phone_number, safe='')
+
+        bolna_websocket_url = f'{bolna_host}/chat/v1/{agent_id}?to_phone_number={encoded_phone_number}' # Added to_phone_number to the websocket URL
 
         response = '''
         <Response>
