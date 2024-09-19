@@ -191,3 +191,61 @@ async def append_to_csv(task_output, to_phone_number): # Added to_phone_number p
 @app.get("/healthcheck")
 async def healthcheck():
     return {"status": "Version 0.0.1"}
+
+import aiofiles
+import asyncio
+from csv import DictReader
+from io import StringIO
+
+@app.get("/calls/{agent_id}")
+async def get_calls_by_agent(agent_id: str):
+    file_path = 'agent_data/calls.csv'
+    calls = []
+    
+    async def process_chunk(chunk):
+        reader = DictReader(StringIO(chunk))
+        return [
+            {key: value.strip() for key, value in row.items()} 
+            for row in reader if row['run_id'].startswith(agent_id)
+        ]
+    
+    async with aiofiles.open(file_path, mode='r') as file:
+        chunk_size = 1024 * 1024  # 1MB chunks
+        chunks = []
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        
+        results = await asyncio.gather(*[process_chunk(chunk) for chunk in chunks])
+        calls = [call for sublist in results for call in sublist]
+    
+    return {"calls": calls}
+
+@app.get("/calls/{agent_id}/{to_number}")
+async def get_calls_by_agent_and_number(agent_id: str, to_number: str):
+    file_path = 'agent_data/calls.csv'
+    calls = []
+    to_number = to_number.lstrip('+')
+    
+    async def process_chunk(chunk):
+        reader = DictReader(StringIO(chunk))
+        return [
+            {key: value.strip() for key, value in row.items()} 
+            for row in reader if row['run_id'].startswith(agent_id) and row['to_number'].lstrip('+').strip() == to_number
+        ]
+        
+    async with aiofiles.open(file_path, mode='r') as file:
+        chunk_size = 1024 * 1024  # 1MB chunks
+        chunks = []
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        
+        results = await asyncio.gather(*[process_chunk(chunk) for chunk in chunks])
+        calls = [call for sublist in results for call in sublist]
+    
+    return {"calls": calls}
