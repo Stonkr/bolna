@@ -258,7 +258,7 @@ PYTHONPATH=. python local_setup/start_bolna_server.py
 PYTHONPATH=. python local_setup/telephony_server/start_plivo_server.py
 
 Remove all unused data (containers, images, volumes, and networks):
-docker system prune -a
+docker system prune
 
 Latest release:
 1ce7be8954512e8185798a27438d8e80ae879eae
