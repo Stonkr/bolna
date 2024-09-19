@@ -5,13 +5,13 @@
 </p>
 
 <h4 align="center">
-  <a href="https://discord.gg/yDfcqreByj">Discord</a> |
+  <a href="https://discord.gg/59kQWGgnm8">Discord</a> |
   <a href="https://docs.bolna.dev">Docs</a> |
   <a href="https://bolna.dev">Website</a>
 </h4>
 
 <h4 align="center">
-  <a href="https://discord.gg/yDfcqreByj">
+  <a href="https://discord.gg/59kQWGgnm8">
       <img src="https://img.shields.io/static/v1?label=Chat%20on&message=Discord&color=blue&logo=Discord&style=flat-square" alt="Discord">
   </a>
   <a href="https://github.com/bolna-ai/bolna/blob/main/LICENSE">
@@ -22,6 +22,8 @@
   </a>
 </h4>
 
+> [!NOTE]
+> We are actively looking for maintainers.
 
 ## Introduction
 
@@ -39,7 +41,7 @@ Bolna helps you create AI Voice Agents which can be instructed to do tasks begin
 1. Initiating a phone call using telephony providers like `Twilio`, `Plivo`, `Exotel`, etc.
 2. Transcribing the conversations using `Deepgram`, etc.
 3. Using LLMs like `OpenAI`, `Llama`, `Cohere`, `Mistral`,  etc to handle conversations
-4. Synthesizing LLM responses back to telephony using `AWS Polly`, `XTTS`, `ElevenLabs`, `Deepgram` etc.
+4. Synthesizing LLM responses back to telephony using `AWS Polly`, `ElevenLabs`, `Deepgram` etc.
 5. Instructing the Agent to perform tasks like sending emails, text messages, booking calendar after the conversation has ended
 
 Refer to the [docs](https://docs.bolna.dev/providers) for a deepdive into all supported providers.
