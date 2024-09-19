@@ -261,5 +261,6 @@ Remove all unused data (containers, images, volumes, and networks):
 docker system prune -a
 
 Latest release:
-1ce7be8954512e8185798a27438d8e80ae879eae
+
 1919d89e5131843629a97c9f9b6e2fd070ac58e2(Open ai assistant)
+2530cda387bb482494b01445f6be41651d61ad2e(call Data getting stored in file)
