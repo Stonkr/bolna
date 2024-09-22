@@ -87,7 +87,7 @@ async def create_agent(agent_data: CreateAgentPayload):
 # Websocket 
 #############################################################################################
 @app.websocket("/chat/v1/{agent_id}")
-async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: str = Query(None), to_phone_number: str = Query(None)):
+async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: str = Query(None), to_phone_number: str = Query(None), call_id: str = Query(None)):
     logger.info("Connected to ws")
     await websocket.accept()
     active_websockets.append(websocket)
@@ -104,7 +104,7 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
     assistant_manager = AssistantManager(agent_config, websocket, agent_id)
 
     try:
-        async for index, task_output in assistant_manager.run(local=False):
+        async for index, task_output in assistant_manager.run(local=False, run_id=call_id):
             logger.info(task_output)
             await append_to_csv(task_output, to_phone_number) # Passing to_phone_number to the function
     except WebSocketDisconnect:
@@ -176,17 +176,6 @@ async def append_to_csv(task_output, to_phone_number): # Added to_phone_number p
             # Write the data row
             writer = csv.writer(file)
             await writer.writerow([run_id, to_phone_number, call_sid, stream_sid, conversation_time, ended_by_assistant, transcript])
-
-# async def read_task_output():
-#     file_path = 'task_output.map'
-    
-#     if os.path.isfile(file_path):
-#         async with aiofiles.open(file_path, mode='r') as file:
-#             content = await file.read()
-#             task_output = json.loads(content)
-#             return task_output
-#     else:
-#         raise FileNotFoundError(f"{file_path} does not exist")
 
 @app.get("/healthcheck")
 async def healthcheck():
