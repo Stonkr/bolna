@@ -14,6 +14,10 @@ from bolna.helpers.logger_config import configure_logger
 from bolna.models import *
 from bolna.llms import LiteLLM
 from bolna.agent_manager.assistant_manager import AssistantManager
+from bolna.helpers.utils import get_s3_file
+from fastapi.responses import JSONResponse
+
+
 
 load_dotenv()
 logger = configure_logger(__name__)
@@ -97,11 +101,17 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
         logger.info(
             f"Retrieved agent config: {retrieved_agent_config}")
         agent_config = json.loads(retrieved_agent_config)
+        # Retrieve context_data from Redis
+        context_data_json = await redis_client.get(f"{call_id}_context_data")
+        if context_data_json:
+            logger.info(
+                f"Retrieved context data: {retrieved_agent_config}")
+            context_data = json.loads(context_data_json)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    assistant_manager = AssistantManager(agent_config, websocket, agent_id)
+    assistant_manager = AssistantManager(agent_config, websocket, agent_id, context_data)
 
     try:
         async for index, task_output in assistant_manager.run(local=False, run_id=call_id):
@@ -144,6 +154,24 @@ async def list_agents():
 
     return {"agents": agents}
 
+@app.get("/agent/{agent_id}/conversation_details")
+async def get_conversation_details(agent_id: str):
+    try:
+        stored_prompt_file_path = f"{agent_id}/conversation_details.json"
+        
+        # Fetch the file from S3 using the utility function
+        file_content = await get_s3_file(bucket_name=BUCKET_NAME, file_key=stored_prompt_file_path)
+        if file_content is None:
+            raise HTTPException(status_code=404, detail="Conversation details not found")
+        
+        conversation_details = json.loads(file_content.decode('utf-8'))
+        
+        return JSONResponse(content=conversation_details, status_code=200)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 
