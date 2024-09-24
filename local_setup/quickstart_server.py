@@ -17,7 +17,7 @@ from bolna.agent_manager.assistant_manager import AssistantManager
 from bolna.helpers.utils import get_s3_file
 from fastapi.responses import JSONResponse
 import aiohttp
-
+import urllib
 
 load_dotenv()
 logger = configure_logger(__name__)
@@ -176,10 +176,11 @@ async def get_conversation_details(agent_id: str):
 
 
 async def send_to_webhook(task_output, to_phone_number):
-    webhook_url = os.getenv('UPDATE_CALL_STATUS_WEBHOOK_URL')
+    run_id=task_output.get('run_id', '')
+    encoded_call_id = urllib.parse.quote(run_id)
+    webhook_url = os.path.join(os.getenv('UPDATE_CALL_STATUS_WEBHOOK_URL'), encoded_call_id)
     if webhook_url:
         payload = {
-            "run_id": task_output.get('run_id', ''),
             "to_number": to_phone_number,
             "call_sid": task_output.get('call_sid', ''),
             "stream_sid": task_output.get('stream_sid', ''),
@@ -287,3 +288,22 @@ async def get_calls_by_agent_and_number(agent_id: str, to_number: str):
         calls = [call for sublist in results for call in sublist]
     
     return {"calls": calls}
+
+
+from bolna.helpers.utils import get_raw_audio_bytes
+
+@app.get("/get-audio")
+async def get_audio_bytes():
+    """
+    API endpoint to get raw audio bytes.
+    """
+    file_name= "agent_data/Jenny/welcome_audios/af102a8571e8a1aa296eb806ff14f96c.wav"
+    try:
+        audio_data = await get_raw_audio_bytes(filename = file_name, local=True, is_location=True)
+        if audio_data is None:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        return JSONResponse(content={"audio_data": audio_data.hex()}, status_code=200)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
