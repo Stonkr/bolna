@@ -16,7 +16,7 @@ from bolna.llms import LiteLLM
 from bolna.agent_manager.assistant_manager import AssistantManager
 from bolna.helpers.utils import get_s3_file
 from fastapi.responses import JSONResponse
-
+import aiohttp
 
 
 load_dotenv()
@@ -117,6 +117,7 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
         async for index, task_output in assistant_manager.run(local=False, run_id=call_id):
             logger.info(task_output)
             await append_to_csv(task_output, to_phone_number) # Passing to_phone_number to the function
+            await send_to_webhook(task_output, to_phone_number) # Send details to webhook
     except WebSocketDisconnect:
         active_websockets.remove(websocket)
     except Exception as e:
@@ -173,6 +174,26 @@ async def get_conversation_details(agent_id: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+
+async def send_to_webhook(task_output, to_phone_number):
+    webhook_url = os.getenv('UPDATE_CALL_STATUS_WEBHOOK_URL')
+    if webhook_url:
+        payload = {
+            "run_id": task_output.get('run_id', ''),
+            "to_number": to_phone_number,
+            "call_sid": task_output.get('call_sid', ''),
+            "stream_sid": task_output.get('stream_sid', ''),
+            "conversation_time": task_output.get('conversation_time', ''),
+            "ended_by_assistant": task_output.get('ended_by_assistant', ''),
+            "transcript": "\n".join([f"{msg['role']}: {msg['content']}" for msg in task_output.get('messages', []) if msg['role'] != 'system'])
+        }
+        headers = {'Content-Type': 'application/json'}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(webhook_url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    logger.info(f"Successfully sent data to webhook: {response.status}")
+                else:
+                    logger.error(f"Error: {response.status} - {await response.text()}")
 
 
 async def append_to_csv(task_output, to_phone_number): # Added to_phone_number parameter

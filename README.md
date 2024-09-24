@@ -264,3 +264,4 @@ Latest release:
 
 1919d89e5131843629a97c9f9b6e2fd070ac58e2(Open ai assistant)
 2530cda387bb482494b01445f6be41651d61ad2e(call Data getting stored in file)
+f5b5d6ce1b8512cd8fa38c8d16b9b7b9df3c7530(Fetch the call details from csv)
