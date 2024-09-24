@@ -260,6 +260,11 @@ PYTHONPATH=. python local_setup/telephony_server/start_plivo_server.py
 Remove all unused data (containers, images, volumes, and networks):
 docker system prune -a
 
+
+docker-compose rm -f bolna-app
+docker rmi $(docker images -q bolna-app)
+docker-compose pull bolna-app
+
 Latest release:
 
 1919d89e5131843629a97c9f9b6e2fd070ac58e2(Open ai assistant)
