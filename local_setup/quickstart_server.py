@@ -14,6 +14,10 @@ from bolna.helpers.logger_config import configure_logger
 from bolna.models import *
 from bolna.llms import LiteLLM
 from bolna.agent_manager.assistant_manager import AssistantManager
+from bolna.helpers.utils import get_s3_file
+from fastapi.responses import JSONResponse
+import aiohttp
+import urllib
 
 load_dotenv()
 logger = configure_logger(__name__)
@@ -87,7 +91,7 @@ async def create_agent(agent_data: CreateAgentPayload):
 # Websocket 
 #############################################################################################
 @app.websocket("/chat/v1/{agent_id}")
-async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: str = Query(None), to_phone_number: str = Query(None)):
+async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: str = Query(None), to_phone_number: str = Query(None), call_id: str = Query(None)):
     logger.info("Connected to ws")
     await websocket.accept()
     active_websockets.append(websocket)
@@ -97,16 +101,23 @@ async def websocket_endpoint(agent_id: str, websocket: WebSocket, user_agent: st
         logger.info(
             f"Retrieved agent config: {retrieved_agent_config}")
         agent_config = json.loads(retrieved_agent_config)
+        # Retrieve context_data from Redis
+        context_data_json = await redis_client.get(f"{call_id}_context_data")
+        if context_data_json:
+            logger.info(
+                f"Retrieved context data: {retrieved_agent_config}")
+            context_data = json.loads(context_data_json)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    assistant_manager = AssistantManager(agent_config, websocket, agent_id)
+    assistant_manager = AssistantManager(agent_config, websocket, agent_id, context_data)
 
     try:
-        async for index, task_output in assistant_manager.run(local=False):
+        async for index, task_output in assistant_manager.run(local=False, run_id=call_id):
             logger.info(task_output)
             await append_to_csv(task_output, to_phone_number) # Passing to_phone_number to the function
+            await send_to_webhook(task_output, to_phone_number) # Send details to webhook
     except WebSocketDisconnect:
         active_websockets.remove(websocket)
     except Exception as e:
@@ -144,7 +155,46 @@ async def list_agents():
 
     return {"agents": agents}
 
+@app.get("/agent/{agent_id}/conversation_details")
+async def get_conversation_details(agent_id: str):
+    try:
+        stored_prompt_file_path = f"{agent_id}/conversation_details.json"
+        
+        # Fetch the file from S3 using the utility function
+        file_content = await get_s3_file(bucket_name=BUCKET_NAME, file_key=stored_prompt_file_path)
+        if file_content is None:
+            raise HTTPException(status_code=404, detail="Conversation details not found")
+        
+        conversation_details = json.loads(file_content.decode('utf-8'))
+        
+        return JSONResponse(content=conversation_details, status_code=200)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
+
+async def send_to_webhook(task_output, to_phone_number):
+    run_id=task_output.get('run_id', '')
+    encoded_call_id = urllib.parse.quote(run_id)
+    webhook_url = os.path.join(os.getenv('UPDATE_CALL_STATUS_WEBHOOK_URL'), encoded_call_id)
+    if webhook_url:
+        payload = {
+            "to_number": to_phone_number,
+            "call_sid": task_output.get('call_sid', ''),
+            "stream_sid": task_output.get('stream_sid', ''),
+            "conversation_time": task_output.get('conversation_time', ''),
+            "ended_by_assistant": task_output.get('ended_by_assistant', ''),
+            "transcript": "\n".join([f"{msg['role']}: {msg['content']}" for msg in task_output.get('messages', []) if msg['role'] != 'system'])
+        }
+        headers = {'Content-Type': 'application/json'}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(webhook_url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    logger.info(f"Successfully sent data to webhook: {response.status}")
+                else:
+                    logger.error(f"Error: {response.status} - {await response.text()}")
 
 
 async def append_to_csv(task_output, to_phone_number): # Added to_phone_number parameter
@@ -177,17 +227,83 @@ async def append_to_csv(task_output, to_phone_number): # Added to_phone_number p
             writer = csv.writer(file)
             await writer.writerow([run_id, to_phone_number, call_sid, stream_sid, conversation_time, ended_by_assistant, transcript])
 
-# async def read_task_output():
-#     file_path = 'task_output.map'
-    
-#     if os.path.isfile(file_path):
-#         async with aiofiles.open(file_path, mode='r') as file:
-#             content = await file.read()
-#             task_output = json.loads(content)
-#             return task_output
-#     else:
-#         raise FileNotFoundError(f"{file_path} does not exist")
-
 @app.get("/healthcheck")
 async def healthcheck():
     return {"status": "Version 0.0.1"}
+
+import aiofiles
+import asyncio
+from csv import DictReader
+from io import StringIO
+
+@app.get("/calls/{agent_id}")
+async def get_calls_by_agent(agent_id: str):
+    file_path = 'agent_data/calls.csv'
+    calls = []
+    
+    async def process_chunk(chunk):
+        reader = DictReader(StringIO(chunk))
+        return [
+            {key: value.strip() for key, value in row.items()} 
+            for row in reader if row['run_id'].startswith(agent_id)
+        ]
+    
+    async with aiofiles.open(file_path, mode='r') as file:
+        chunk_size = 1024 * 1024  # 1MB chunks
+        chunks = []
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        
+        results = await asyncio.gather(*[process_chunk(chunk) for chunk in chunks])
+        calls = [call for sublist in results for call in sublist]
+    
+    return {"calls": calls}
+
+@app.get("/calls/{agent_id}/{to_number}")
+async def get_calls_by_agent_and_number(agent_id: str, to_number: str):
+    file_path = 'agent_data/calls.csv'
+    calls = []
+    to_number = to_number.lstrip('+')
+    
+    async def process_chunk(chunk):
+        reader = DictReader(StringIO(chunk))
+        return [
+            {key: value.strip() for key, value in row.items()} 
+            for row in reader if row['run_id'].startswith(agent_id) and row['to_number'].lstrip('+').strip() == to_number
+        ]
+        
+    async with aiofiles.open(file_path, mode='r') as file:
+        chunk_size = 1024 * 1024  # 1MB chunks
+        chunks = []
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        
+        results = await asyncio.gather(*[process_chunk(chunk) for chunk in chunks])
+        calls = [call for sublist in results for call in sublist]
+    
+    return {"calls": calls}
+
+
+from bolna.helpers.utils import get_raw_audio_bytes
+
+@app.get("/get-audio")
+async def get_audio_bytes():
+    """
+    API endpoint to get raw audio bytes.
+    """
+    file_name= "agent_data/Jenny/welcome_audios/af102a8571e8a1aa296eb806ff14f96c.wav"
+    try:
+        audio_data = await get_raw_audio_bytes(filename = file_name, local=True, is_location=True)
+        if audio_data is None:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        return JSONResponse(content={"audio_data": audio_data.hex()}, status_code=200)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
