@@ -134,7 +134,15 @@ class ElevenlabsSynthesizer(BaseSynthesizer):
                 logger.info("Payload was null")
 
     async def synthesize(self, text):
+        # audio = await self.__generate_http(text, format="pcm_16000")
         audio = await self.__generate_http(text, format="mp3_44100_128")
+
+        # audio_wav = resample(convert_audio_to_wav(audio, source_format="mp3"), int(self.sampling_rate),
+        #   
+        # format="wav")
+        wav_bytes = convert_audio_to_wav(audio, source_format="mp3")
+        logger.info(f"self.sampling_rate {self.sampling_rate}")
+        audio = resample(wav_bytes, int(self.sampling_rate), format="wav")
         return audio
 
     async def __generate_http(self, text, format=None):

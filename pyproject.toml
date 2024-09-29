@@ -49,3 +49,6 @@ push = false
 "bolna/__init__.py" = [
     '^__version__ = "{version}"$',
 ]
+
+[tool.ruff]
+select = []

@@ -8,7 +8,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Quer
 from fastapi.middleware.cors import CORSMiddleware
 import redis.asyncio as redis
 from dotenv import load_dotenv
-from bolna.helpers.utils import store_file
+from bolna.helpers.utils import store_file, get_md5_hash
 from bolna.prompts import *
 from bolna.helpers.logger_config import configure_logger
 from bolna.models import *
@@ -18,6 +18,7 @@ from bolna.helpers.utils import get_s3_file
 from fastapi.responses import JSONResponse
 import aiohttp
 import urllib
+from bolna.providers import SUPPORTED_SYNTHESIZER_MODELS
 
 load_dotenv()
 logger = configure_logger(__name__)
@@ -83,6 +84,18 @@ async def create_agent(agent_data: CreateAgentPayload):
         redis_client.set(agent_uuid, json.dumps(data_for_db)),
         store_file(bucket_name=BUCKET_NAME, file_key=stored_prompt_file_path, file_data=agent_prompts, local=False)
     )
+
+    # Create and store welcome message audio
+    welcome_message = data_for_db.get("agent_welcome_message", "")
+    if welcome_message:
+        synthesizer_config = data_for_db['tasks'][0]['tools_config']['synthesizer']
+        synthesizer_provider = synthesizer_config['provider']
+        synthesizer_class = SUPPORTED_SYNTHESIZER_MODELS.get(synthesizer_provider)
+        if synthesizer_class:
+            synthesizer = synthesizer_class(**synthesizer_config['provider_config'])
+            audio_data = await synthesizer.synthesize(welcome_message)
+            audio_file_name = f"{get_md5_hash(welcome_message)}.wav"
+            await store_file(bucket_name=BUCKET_NAME, file_key=f"{agent_uuid}/audio/{audio_file_name}", file_data=audio_data, content_type="wav", local=False)
 
     return {"agent_id": agent_uuid, "state": "created"}
 
