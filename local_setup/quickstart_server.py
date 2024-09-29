@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 import aiohttp
 import urllib
 from bolna.providers import SUPPORTED_SYNTHESIZER_MODELS
-
+from bolna.helpers.utils import wav_bytes_to_pcm, resample 
 load_dotenv()
 logger = configure_logger(__name__)
 BUCKET_NAME=os.getenv('BUCKET_NAME')
@@ -93,9 +93,10 @@ async def create_agent(agent_data: CreateAgentPayload):
         synthesizer_class = SUPPORTED_SYNTHESIZER_MODELS.get(synthesizer_provider)
         if synthesizer_class:
             synthesizer = synthesizer_class(**synthesizer_config['provider_config'])
-            audio_data = await synthesizer.synthesize(welcome_message)
-            audio_file_name = f"{get_md5_hash(welcome_message)}.wav"
-            await store_file(bucket_name=BUCKET_NAME, file_key=f"{agent_uuid}/audio/{audio_file_name}", file_data=audio_data, content_type="wav", local=False)
+            audio_chunk = await synthesizer.synthesize(welcome_message)
+            audio_data = wav_bytes_to_pcm(resample(audio_chunk, format = "wav", target_sample_rate = 8000 ))
+            audio_file_name = f"{get_md5_hash(welcome_message)}.pcm"
+            await store_file(bucket_name=BUCKET_NAME, file_key=f"{agent_uuid}/audio/{audio_file_name}", file_data=audio_data, content_type="pcm", local=False)
 
     return {"agent_id": agent_uuid, "state": "created"}
 

@@ -262,10 +262,15 @@ PYTHONPATH=. python local_setup/telephony_server/start_plivo_server.py
 Remove all unused data (containers, images, volumes, and networks):
 docker system prune
 
-
+create a deploy-bolna-docker.sh in the app root dir.
+cd local_setup
+docker-compose build bolna-app
+docker-compose up -d bolna-app
 docker-compose rm -f bolna-app
 docker rmi $(docker images -q bolna-app)
 docker-compose pull bolna-app
+docker-compose up -d bolna-app
+docker system prune
 
 Latest release:
 
