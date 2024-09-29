@@ -1561,6 +1561,7 @@ class TaskManager(BaseManager):
                 else:
                     start_time = time.perf_counter()
                     if(meta_info['message_category'] == 'agent_welcome_message'):
+                        logger.debug("Fethcing agent_welcome message from S3")
                         audio_chunk = await get_raw_audio_bytes(text, self.assistant_name,
                                                                 meta_info['format'], local=self.is_local,
                                                                 assistant_id=self.assistant_id)    
