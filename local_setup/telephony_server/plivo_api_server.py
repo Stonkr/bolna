@@ -76,6 +76,7 @@ async def make_call(request: Request):
         # adding hangup_url since plivo opens a 2nd websocket once the call is cut.
         # https://github.com/bolna-ai/bolna/issues/148#issuecomment-2127980509
         encoded_call_id = urllib.parse.quote(call_id)
+        print("Making call to Plivo")
         plivo_client = plivo.RestClient(os.getenv('PLIVO_AUTH_ID'), os.getenv('PLIVO_AUTH_TOKEN'))
         call = plivo_client.calls.create(
             from_=plivo_phone_number,
