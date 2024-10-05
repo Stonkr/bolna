@@ -21,7 +21,7 @@ plivo_phone_number = os.getenv('PLIVO_PHONE_NUMBER')
 ngrok_host= os.getenv('NGROK_HOST', 'ngrok')
 
 # Initialize Plivo client
-plivo_client = plivo.RestClient(os.getenv('PLIVO_AUTH_ID'), os.getenv('PLIVO_AUTH_TOKEN'))
+
 
 # Initialize Redis client
 redis_pool = redis.ConnectionPool.from_url(os.getenv('REDIS_URL'), decode_responses=True)
@@ -76,6 +76,7 @@ async def make_call(request: Request):
         # adding hangup_url since plivo opens a 2nd websocket once the call is cut.
         # https://github.com/bolna-ai/bolna/issues/148#issuecomment-2127980509
         encoded_call_id = urllib.parse.quote(call_id)
+        plivo_client = plivo.RestClient(os.getenv('PLIVO_AUTH_ID'), os.getenv('PLIVO_AUTH_TOKEN'))
         call = plivo_client.calls.create(
             from_=plivo_phone_number,
             to_=call_details.get('recipient_phone_number'),

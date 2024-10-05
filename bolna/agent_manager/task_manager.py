@@ -1560,7 +1560,15 @@ class TaskManager(BaseManager):
                         meta_info["format"] = "pcm"
                 else:
                     start_time = time.perf_counter()
-                    audio_chunk = await get_raw_audio_bytes(text, self.assistant_name,
+                    if(meta_info['message_category'] == 'agent_welcome_message'):
+                        logger.debug("Fethcing agent_welcome message from S3")
+                        audio_chunk = await get_raw_audio_bytes(text, self.assistant_name,
+                                                                meta_info['format'], local=self.is_local,
+                                                                assistant_id=self.assistant_id)    
+                        if(meta_info['format'] == 'wav'):
+                            audio_chunk = wav_bytes_to_pcm(resample(audio_chunk, format = "wav", target_sample_rate = 8000 ))
+                    else:
+                        audio_chunk = await get_raw_audio_bytes(text, self.assistant_name,
                                                                 'pcm', local=self.is_local,
                                                                 assistant_id=self.assistant_id)
                     logger.info(f"Time to get response from S3 {time.perf_counter() - start_time }")
